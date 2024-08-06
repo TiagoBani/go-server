@@ -1,4 +1,41 @@
 services:
+  builder:
+    image: golang:alpine3.20
+    command:
+      - ash
+      - -c
+      - |
+        go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest 
+        go install github.com/jackc/tern/v2@latest
+        echo "finish download"
+    volumes:
+      - build:/go
+  app:
+    image: golang:alpine3.20
+    restart: always
+    ports:
+      - ${WSRS_APP_PORT:-8080}:${WSRS_APP_PORT:-8080}
+    environment:
+      WSRS_DATABASE_PORT: 5432
+      WSRS_DATABASE_USER: postgress
+      WSRS_DATABASE_PASSWORD: 123456789
+      WSRS_DATABASE_NAME: wsrs
+      WSRS_DATABASE_HOST: db
+      WSRS_APP_PORT: ${WSRS_APP_PORT:-8080}
+    working_dir: /home/app
+    volumes:
+      - build:/go
+      - .:/home/app
+    command:
+      - ash
+      - -c
+      - |
+        go mod tidy 
+        go generate ./... 
+        go run cmd/wsrs/main.go
+    depends_on:
+      - db
+      - builder
   db:
     image: postgres
     restart: unless-stopped
@@ -14,3 +51,4 @@ services:
 volumes:
   db:
     driver: local
+  build:

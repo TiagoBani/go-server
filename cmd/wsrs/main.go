@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -41,13 +42,15 @@ func main() {
 
 	handler := api.NewHandler(pgstore.New(pool))
 
+	app_port := os.Getenv("WSRS_APP_PORT")
 	go func() {
-		if err := http.ListenAndServe(":8080", handler); err != nil {
+		if err := http.ListenAndServe(":"+app_port, handler); err != nil {
 			if !errors.Is(err, http.ErrServerClosed) {
 				panic(err)
 			}
 		}
 	}()
+	slog.Info(fmt.Sprintf("erver is running in port %s ...", app_port))
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
