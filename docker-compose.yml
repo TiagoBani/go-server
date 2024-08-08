@@ -1,5 +1,5 @@
 services:
-  builder:
+  stage:
     image: golang:alpine3.20
     command:
       - ash
@@ -7,9 +7,8 @@ services:
       - |
         go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest 
         go install github.com/jackc/tern/v2@latest
-        echo "finish download"
     volumes:
-      - build:/go
+      - stage:/go
   app:
     image: golang:alpine3.20
     restart: always
@@ -24,7 +23,7 @@ services:
       WSRS_APP_PORT: ${WSRS_APP_PORT:-8080}
     working_dir: /home/app
     volumes:
-      - build:/go
+      - stage:/go
       - .:/home/app
     command:
       - ash
@@ -34,8 +33,10 @@ services:
         go generate ./... 
         go run cmd/wsrs/main.go
     depends_on:
-      - db
-      - builder
+      db:
+        condition: service_healthy
+      stage:
+        condition: service_completed_successfully
   db:
     image: postgres
     restart: unless-stopped
@@ -51,4 +52,4 @@ services:
 volumes:
   db:
     driver: local
-  build:
+  stage:
